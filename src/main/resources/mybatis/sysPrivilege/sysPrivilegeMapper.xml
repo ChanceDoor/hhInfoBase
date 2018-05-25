@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC   
+    "-//mybatis.org//DTD Mapper 3.0//EN"  
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">  
+     
+<mapper namespace="hanghuan.jixiaoqs.dao.SysPrivilegeMapper">  
+    <resultMap type="SysPrivilege" id="result_sys_privilege_map"> 
+    	<result property="id" column="id"/> 
+    	<result property="name" column="name"/> 
+    	<result property="typeId" column="type_id"/> 
+    	<collection property="type" column="type_id" select="hanghuan.jixiaoqs.dao.SysEnumerationMapper.findEnumerationById"/>
+  	</resultMap>  
+  	
+    <!-- find -->  
+    <select id="findSysPrivilegeById" parameterType="long" resultMap="result_sys_privilege_map">  
+        select  
+        * from sys_privilege where id=#{id} AND deleted=0;
+    </select>
+    
+    <select id="findSysPrivilegeByName" parameterType="string" resultMap="result_sys_privilege_map">  
+        select  
+        * from sys_privilege where name=#{name} AND deleted=0;
+    </select>    
+    
+    <!-- list -->  
+    <select id="selectAllSysPrivilegesByConditions" parameterType="HashMap" resultMap="result_sys_privilege_map">  
+        select  
+        * from sys_privilege
+        where 
+        deleted=0 
+        	<if test="privilegeKeyword != null">
+				and name like '%'+#{privilegeKeyword}+'%' 
+			</if> 
+    </select>
+    
+    <select id="selectSysPrivilegesByConditionsByPage" parameterType="HashMap" resultMap="result_sys_privilege_map">  
+        select  
+        * from (
+        select row_number() over(order by id) as rn, * from 
+        sys_privilege
+        where deleted=0 
+        <if test="privilegeKeyword != null">
+			and name like '%'+#{privilegeKeyword}+'%' 
+		</if>
+        )as a
+        where 
+        <![CDATA[
+             rn>#{pageNum} and rn<=#{pageSize}
+         ]]>
+    </select>
+    
+    <!-- count -->
+    <select id="listSysPrivilegesByConditionsCount" parameterType="HashMap" resultType="Integer">
+       select count(id) from sys_privilege
+       where deleted=0 
+       <if test="privilegeKeyword != null">
+			and name like '%'+#{privilegeKeyword}+'%' 
+	   </if>
+    </select>
+    
+    <select id="selectSysPrivilegesByRoleId" parameterType="HashMap" resultMap="result_sys_privilege_map">   
+        select 
+        p.* from sys_privilege p left join rel_privilege_to_role r on p.id=r.privilege_id
+        where r.role_id=#{id}  AND p.deleted=0 AND r.deleted=0;
+    </select>
+    
+    <!-- insert -->
+    <insert id="insertSysPrivilege" parameterType="SysPrivilege">
+  		insert into sys_privilege (name,type_id)
+  		values (#{name},#{typeId});
+	</insert>
+	
+	<!-- update -->
+	<update id="updateSysPrivilegeById" parameterType="SysPrivilege" flushCache="true">
+		update sys_privilege
+		<set>
+			<if test="name != null">
+				name = #{name},
+			</if>
+			<if test="typeId != null">
+				type_id = #{typeId},
+			</if>
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- delete -->
+	<delete id="deleteSysPrivilegeById" parameterType="long" flushCache="true">
+        update sys_privilege
+		<set>
+			deleted = 1
+		</set>
+	    	where id =#{id}
+	</delete>
+
+</mapper>  

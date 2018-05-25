@@ -1,0 +1,915 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC   
+    "-//mybatis.org//DTD Mapper 3.0//EN"  
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">  
+     
+<mapper namespace="hanghuan.jixiaoqs.dao.SysUserMapper">
+
+    <resultMap type="SysUser" id="result_sys_user_map"> 
+    	<result property="id" column="id"/> 
+    	<result property="userUid" column="user_uid"/> 
+    	
+    	<result property="username" column="username"/> 
+    	<result property="password" column="password"/> 
+    	<result property="name" column="name"/>
+		<result property="showName" column="show_name"/>
+    	<result property="sexId" column="sex_id"/>
+    	<result property="identityId" column="identity_id"/>
+    	<result property="educationId" column="education_id"/>
+    	<result property="politicId" column="politic_id"/>
+    	<result property="personalPhone" column="personal_phone"/>
+    	<result property="workPhone" column="work_phone"/>
+    	<result property="policeNumber" column="police_number"/>
+    	<result property="roleTypeId" column="role_type_id"/>
+    	<result property="policeTypeId" column="police_type_id"/>
+    	<result property="roleLevelId" column="role_level_id"/>
+    	<result property="unitId" column="unit_id"/>
+    	<result property="signature" column="signature"/>
+    	<result property="avatar" column="avatar"/>
+    	<result property="commonId" column="common_id"/>
+    	<result property="updateStartTime" column="updateStartTime"/>
+    	<result property="updateEndTime" column="updateEndTime"/>
+    	<result property="updateVersion" column="updateVersion"/>
+		<result property="token" column="token"/>
+		<result property="accountId" column="account_id"/>
+    	
+    	<association property="type" column="type_id" select="hanghuan.jixiaoqs.dao.SysEnumerationMapper.findEnumerationById"/>
+    	
+     	<collection property="departments" column="id" select="hanghuan.jixiaoqs.dao.InfoDepartmentMapper.selectDepartmentsByUserId"/>
+    	<collection property="unit" column="unit_id" select="hanghuan.jixiaoqs.dao.InfoDepartmentMapper.findInfoDepartmentById"/>
+ 	 	<collection property="roles" column="id" select="hanghuan.jixiaoqs.dao.SysRoleMapper.selectSysRolesByUserId"/> 
+    	<collection property="jobs" column="id" select="hanghuan.jixiaoqs.dao.InfoJobMapper.selectInfoJobsByUserId"/>
+    	<collection property="mainJobs" column="id" select="hanghuan.jixiaoqs.dao.InfoJobMapper.selectMainInfoJobsByUserId"/>
+    	<collection property="viceJobs" column="id" select="hanghuan.jixiaoqs.dao.InfoJobMapper.selectViceInfoJobsByUserId"/>
+    	<collection property="education" column="education_id" select="hanghuan.jixiaoqs.dao.SysEnumerationMapper.findEnumerationById"/>
+    	<collection property="politic" column="politic_id" select="hanghuan.jixiaoqs.dao.SysEnumerationMapper.findEnumerationById"/>
+    	<collection property="sex" column="sex_id" select="hanghuan.jixiaoqs.dao.SysEnumerationMapper.findEnumerationById"/>
+    	<collection property="identity" column="identity_id" select="hanghuan.jixiaoqs.dao.SysEnumerationMapper.findEnumerationById"/>
+    	<collection property="roleType" column="role_type_id" select="hanghuan.jixiaoqs.dao.SysEnumerationMapper.findEnumerationById"/>
+    	<collection property="policeType" column="police_type_id" select="hanghuan.jixiaoqs.dao.SysEnumerationMapper.findEnumerationById"/>
+    	<collection property="roleLevel" column="role_level_id" select="hanghuan.jixiaoqs.dao.SysEnumerationMapper.findEnumerationById"/>
+    	<collection property="userHistorys" column="id" select="hanghuan.jixiaoqs.dao.UserHistoryMapper.selectUserHistorysByUserId"/>
+    	<collection property="beforeResults" column="common_id" select="hanghuan.jixiaoqs.dao.PfmcResultMapper.selectBeforeResultsBycommonId"/>
+    	<collection property="virtualAccount" column="id" select="hanghuan.jixiaoqs.dao.SysUserMapper.listVirtualNameByUserId"/>
+
+  	</resultMap>
+
+	<resultMap type="SimpleUser" id="result_simple_user_map">
+		<result property="id" column="id"/>
+		<result property="name" column="name"/>
+	</resultMap>
+
+
+
+  	 <select id="listUserByDepartment" parameterType="HashMap" resultMap="result_sys_user_map">
+  	   select * from sys_user s where s.deleted=0 and type_id!=11002
+  	   <if test="queryDepartmentId!=null">
+  	     and unitId = #{queryDepartmentId}
+  	   </if>
+  	   <if test="queryLowerDepartmentId!=null">
+  	     and id in (select user_id from rel_user_to_department where deleted=0 and department_id=#{queryLowerDepartmentId} and common_type=0)
+  	   </if>
+  	    <if test="queryDepartmentIds!=null">
+	      and id in (select user_id from rel_user_to_department where deleted=0 and common_type=0 and department_id in
+	      <foreach collection="queryDepartmentIds" item="queryDepartmentIds" index="index" open="("
+			close=")" separator=",">
+			#{queryDepartmentIds.id}
+		  </foreach>
+		  )
+	    </if>
+  	</select>
+  	
+  	<select id="selectPfmcResultNoBySysUserId" parameterType="HashMap" resultMap="result_sys_user_map">
+  	   select * from sys_user s where s.deleted=0 and s.updateEndTime IS NULL
+		and s.id not in(
+		select r.user_id from pfmc_result r where r.deleted=0
+		<if test="startDate!=null and endDate!=null">
+		   and r.create_time&gt;=#{startDate} and r.create_time&lt;#{endDate}
+		</if>
+		)
+		and s.type_id!=11002
+  	</select>
+  	
+  	<select id="findPfmcResultNotResult" resultMap="result_sys_user_map">
+    	SELECT * FROM sys_user u where u.id 
+    	    NOT IN(
+    	    SELECT r.user_id FROM pfmc_result r) 
+    </select>
+  	
+    <!-- find -->  
+    <select id="findSysUserById" parameterType="long" resultMap="result_sys_user_map">  
+        select * from sys_user where id=#{id} and deleted=0
+    </select>  
+    <select id="findSysUserByIdDeleted" parameterType="long" resultMap="result_sys_user_map">  
+        select * from sys_user where id in(select MAX(id) from sys_user where common_id in(select common_id from sys_user where id=#{user_id}))
+    </select>  
+    <select id="findSysUserByCommonId" parameterType="long" resultMap="result_sys_user_map">  
+        select TOP 1 * from sys_user where common_id=#{commonId} order by id desc;
+    </select>
+	<select id="findSysUserByCommonIdByDate" parameterType="HashMap" resultMap="result_sys_user_map">
+		select TOP 1 * from sys_user
+		where
+		common_id=#{commonId}
+		and ((updateStartTime &lt; #{date}
+		and (updateEndTime IS NULL or updateEndTime &gt; #{date} ))or(updateStartTime &gt; #{date} and common_id=id))
+		order by id desc;
+	</select>
+	<select id="findSysUserNameById" parameterType="long" resultType="string">
+        SELECT name FROM sys_user WHERE id=#{id} and deleted=0
+    </select>
+   
+    
+    
+    
+    
+    <select id="findSysUserByUsername" resultMap="result_sys_user_map">  
+        select   
+        top 1 * from sys_user
+        where deleted=0 and updateVersion =(SELECT TOP 1 MAX(updateVersion)FROM sys_user where username = #{username} and deleted=0 group by common_id)
+        and username = #{username} and deleted=0
+    </select>
+
+	<select id="findSysUserByToken" resultMap="result_sys_user_map">
+		select
+		top 1 * from sys_user
+		where deleted=0 and updateVersion =(SELECT MAX(updateVersion)FROM sys_user where token = #{token} and deleted=0 group by common_id)
+		and token = #{token}
+	</select>
+    
+    <select id="findSysUserByUserNameTow" parameterType="String" resultMap="result_sys_user_map">  
+        SELECT   
+        TOP(1) * FROM sys_user s1 WHERE s1.common_id in(
+		select s2.common_id from sys_user s2 where username=#{username} and updateEndTime is NULL
+		)
+        and deleted=0 order by s1.updateVersion desc
+    </select>
+    
+    <!-- 最小的user -->
+    <select id="findSysUserSmall" parameterType="long" resultMap="result_sys_user_map">   
+        select   
+        TOP(1) * from sys_user s1 where common_id=(
+		select common_id from sys_user s2 where s2.id=#{id}
+		)
+		and s1.deleted =0
+		order by s1.updateVersion asc
+    </select>
+    
+    <!-- 最大的user -->
+    <select id="findSysUserLarge" parameterType="long" resultMap="result_sys_user_map">  
+       select   
+        TOP(1) * from sys_user s1 where common_id=(
+		select common_id from sys_user s2 where s2.id=#{id}
+		)
+		and s1.deleted =0
+		order by s1.updateVersion desc
+    </select>
+    
+    <select id="findSysUserByName" resultMap="result_sys_user_map">  
+        select   
+        * from sys_user
+        where deleted=0 and name=#{name}
+    </select>
+    
+    <select id="findSysUserByUserUid" resultMap="result_sys_user_map">  
+        select   
+        * from sys_user
+        where deleted=0 and user_uid=#{userUid}  
+    </select>
+    
+    <select id="findSysUserByPoliceIdAndName"  parameterType="HashMap"  resultMap="result_sys_user_map">  
+        select TOP 1  
+        * from sys_user
+        where deleted=0  
+        <if test="policeId != null"> 
+       	 	and police_number=#{policeId} 
+        </if>
+        <if test="name != null">  
+        	and name=#{name}  
+        </if>
+        ORDER BY ID DESC
+    </select>
+    
+    <select id="findReviewerByConditions" parameterType="HashMap" resultMap="result_sys_user_map">  
+      select TOP 1 a.* from 
+      sys_user a 
+      LEFT JOIN 
+      rel_role_to_user b
+      ON a.id=b.user_id 
+      where a.deleted=0 and b.deleted=0 
+      and role_id = #{roleId}
+      <if test="roleId == 19 or roleId == 22 or roleId == 24">
+		and a.unit_id =#{unitId}
+	  </if> 
+	  <if test="roleId == 19">
+		and a.id in (
+	 		select user_id from rel_user_to_department 
+	 		where department_id=#{departmentId}
+ 		)
+	  </if>
+      
+    </select>
+
+	<select id="findReviewerByPfmcApplicationId" parameterType="long" resultMap="result_sys_user_map">
+		select TOP 1 a.* from
+		sys_user a
+		LEFT JOIN
+		rel_reviewer_to_task b
+		ON a.id=b.user_id
+		where a.deleted=0 and b.deleted=0
+		and b.application_id = #{id}
+		order by id desc;
+
+	</select>
+
+	<select id="findReviewerByPfmcTaskId" parameterType="HashMap" resultType="String">
+		select top 1 name  from sys_user where id in (
+		select top 1 user_id from rel_reviewer_to_task where task_id=#{id} and deleted=0
+		) and deleted=0 and updateEndTime is null
+	</select>
+    <!-- find end -->
+
+    <select id="countSysUsersByConditions" parameterType="HashMap"  resultType="Integer">  
+        select count(id) from sys_user 
+        where 
+        deleted=0
+        	<if test="userKeyword != null">
+				and name like '%'+#{userKeyword}+'%' 
+			</if> 
+			<if test="unitId != null">
+				and unit_id=#{unitId}
+			</if> 
+			<if test="typeId != null">
+				and type_id=#{typeId}
+			</if> 
+			<if test="departmentId != null">
+				and id in (select user_id from rel_user_to_department where deleted=0 and department_id=#{departmentId})
+			</if>
+			    and id in(select MAX(id) from sys_user group by common_id) 
+    </select>
+    
+    <select id="countSysUsersByRoleIdAndUserId" parameterType="HashMap"  resultType="Integer">  
+        select count(a.id) from 
+        sys_user a
+        LEFT JOIN rel_role_to_user b
+        ON a.id = b.user_id 
+			<if test="roleId != null">
+				and b.role_id =#{roleId}
+			</if> 
+			<if test="userId != null">
+				and a.id=#{userId}
+			</if> 
+        where 
+        a.deleted=0 and b.deleted=0
+    </select>
+    
+    <select id="selectSysUsersByRoleId" parameterType="long"  resultMap="result_sys_user_map">  
+        select 
+        	t1.*
+        from 
+        	sys_user t1 
+        left join 
+        	rel_role_to_user t2
+        on 
+        	t2.deleted=0 and t2.user_id=t1.id
+        where
+        	t1.deleted=0 and updateEndTime IS NULL
+        	and t2.role_id=#{roleId}
+    </select>
+    
+    <select id="selectSysUsersByDepartmentIdAndRoleId" parameterType="HashMap"  resultMap="result_sys_user_map">  
+		SELECT t1.* FROM sys_user t1
+		LEFT JOIN rel_user_to_department t2
+		ON t2.deleted=0 AND t1.id=t2.user_id
+		LEFt JOIN rel_role_to_user t3 
+		ON t3.deleted=0 AND t1.id=t3.user_id
+		WHERE t1.deleted=0 AND t2.department_id=#{departmentId} AND t3.role_id=#{roleId}
+		and t1.updateEndTime is NULL
+    </select>
+    
+    <!--  根据部门ID查询 该部门下的用户  -->
+    <select id="selectSysUsersByDepartmentIdTo" parameterType="HashMap"  resultMap="result_sys_user_map">  
+		SELECT t1.* FROM sys_user t1
+		LEFT JOIN rel_user_to_department t2
+		ON t2.deleted=0 AND t1.id=t2.user_id
+		LEFt JOIN rel_role_to_user t3 
+		ON t3.deleted=0 AND t1.id=t3.user_id
+		WHERE t1.deleted=0 
+		<if test="departmentId != null">
+			AND t2.department_id=#{departmentId} 
+		</if>
+		<if test="userId != null">
+			AND t1.id=#{userId}
+		</if>
+			 order by t1.id
+		<!-- <if test="roleId != null">
+			AND t3.role_id=#{roleId}
+		</if> -->
+    </select>
+    
+    <!-- 查询出指定月某个用户的日志填写条数 -->
+    <select id="selectSysUserCountById" parameterType="HashMap" resultType="Integer">
+		SELECT count(s.id) FROM dairy_journal d
+		left join sys_user s on s.id=d.creator_id where d.deleted=0
+	<if test="equiryMonth!=null and dateClosed!=null">
+		and d.record_time&gt;=#{equiryMonth} AND d.record_time&lt;=#{dateClosed}		
+	</if>
+		AND s.id in (
+		select id from sys_user where common_id in(
+		 	    select common_id from sys_user where id=#{id}
+			)
+		) AND d.journal_id=0
+    </select>
+    
+    <!-- 查111111111111 -->
+    <select id="selectSysUserByIdList" parameterType="long" resultMap="result_sys_user_map">
+    	select * from sys_user where id=#{sysUserId}
+    </select>
+    
+    <select id="selectSysUsersByUnitIdAndRoleId" parameterType="HashMap"  resultMap="result_sys_user_map">  
+		select 
+			*
+		from 
+			sys_user t1 
+		left join rel_role_to_user t2
+		on 
+			t2.deleted=0 and t1.id=t2.user_id
+		where 
+			t1.deleted=0
+			and t1.unit_id=#{unitId}
+			and t2.role_id=#{roleId}
+and t1.updateEndTime is NULL
+    </select>
+    
+     <select id="selectEvalUsersByEvalutionId" parameterType="HashMap" resultMap="result_sys_user_map">  
+        select
+        	*
+        from sys_user t1
+        left join rel_user_to_evaluation t2
+        on t1.id=t2.user_id 
+        	and t2.deleted=0
+        where t1.deleted=0
+        	and t2.evaluation_id=#{eid}
+        	and t2.type_id=2
+    </select>
+
+	<select id="selectEvalUsersByProEvalutionId" parameterType="HashMap" resultMap="result_sys_user_map">
+		select
+		*
+		from sys_user t1
+		left join rel_user_to_pro_evaluation t2
+		on t1.id=t2.user_common_id
+		and t2.deleted=0
+		where t1.deleted=0
+		and t2.evaluation_id=#{eid}
+		and t2.type_id=20002
+	</select>
+
+     <select id="selectToEvalUsersByEvalutionId" parameterType="HashMap" resultMap="result_sys_user_map">  
+        select
+        	*
+        from sys_user t1
+        left join rel_user_to_evaluation t2
+        on t1.id=t2.user_id 
+        	and t2.deleted=0
+        where t1.deleted=0
+        	and t2.evaluation_id=#{eid}
+        	and t2.type_id=1
+    </select>
+
+	<select id="selectToEvalUsersByProEvalutionId" parameterType="HashMap" resultMap="result_sys_user_map">
+		select
+		*
+		from sys_user t1
+		left join rel_user_to_pro_evaluation t2
+		on t1.id=t2.user_common_id
+		and t2.deleted=0
+		where t1.deleted=0
+		and t2.evaluation_id=#{eid}
+		and t2.type_id=20001
+	</select>
+    
+    <select id="selectSysUsersByConditions" parameterType="HashMap" resultMap="result_sys_user_map">  
+        select a.* from sys_user a
+        LEFT JOIN 
+        rel_role_to_user b 
+        ON a.id=b.user_id
+        where 
+        a.deleted=0 and b.deleted=0
+		and a.id in (select id from sys_user where common_id in (select common_id from sys_user where id=a.id and updateEndTime is null))
+        	<if test="userKeyword != null">
+				and a.name like '%'+#{userKeyword}+'%' 
+			</if> 
+			<if test="unitId != null">
+				and a.unit_id=#{unitId}
+				
+			</if> 
+			
+			<if test="departmentId != null">
+				and a.id in (select user_id from rel_user_to_department where deleted=0 and department_id=#{departmentId})
+			</if> 
+			<if test="roleId != null">
+				and (b.role_id=#{roleId}
+				<if test="roleId2 != null">
+					or b.role_id=#{roleId2}
+				</if> 
+				<if test="roleId3 != null">
+					or b.role_id=#{roleId3}
+				</if> 
+				<if test="roleId4 != null">
+					or b.role_id=#{roleId4}
+				</if> 
+				<if test="roleId5 != null">
+					or b.role_id=#{roleId5}
+				</if> 
+				<if test="roleId6 != null">
+					or b.role_id=#{roleId6}
+				</if> 
+				)
+			</if> 
+			<if test="personalPhone != null">
+				and a.personal_phone=#{personalPhone}
+			</if>
+			<if test="isVirtualAccount != null">
+				and a.is_virtual_account=#{isVirtualAccount}
+			</if>
+			<if test="typeId != null">
+				and a.type_id=#{typeId}
+			</if>
+
+		order by a.id asc
+    </select>
+
+	<select id="listSimpleUsersByConditions" parameterType="HashMap" resultMap="result_simple_user_map">
+		select a.* from sys_user a
+		LEFT JOIN
+		rel_role_to_user b
+		ON a.id=b.user_id
+		where
+		a.deleted=0 and b.deleted=0
+		<if test="userKeyword != null">
+			and a.name like '%'+#{userKeyword}+'%'
+		</if>
+		<if test="unitId != null">
+			and a.unit_id=#{unitId}
+
+		</if>
+
+		<if test="departmentId != null">
+			and a.id in (select user_id from rel_user_to_department where deleted=0 and department_id=#{departmentId})
+		</if>
+		<if test="roleId != null">
+			and (b.role_id=#{roleId}
+			<if test="roleId2 != null">
+				or b.role_id=#{roleId2}
+			</if>
+			<if test="roleId3 != null">
+				or b.role_id=#{roleId3}
+			</if>
+			<if test="roleId4 != null">
+				or b.role_id=#{roleId4}
+			</if>
+			<if test="roleId5 != null">
+				or b.role_id=#{roleId5}
+			</if>
+			<if test="roleId6 != null">
+				or b.role_id=#{roleId6}
+			</if>
+			)
+		</if>
+		<if test="personalPhone != null">
+			and a.personal_phone=#{personalPhone}
+		</if>
+		<if test="isVirtualAccount != null">
+			and a.is_virtual_account=#{isVirtualAccount}
+		</if>
+
+		order by a.id asc
+	</select>
+	<select id="listVirtualNameByUserId" parameterType="HashMap" resultMap="result_simple_user_map">
+		  select
+			virtual.id as id ,
+			virtual.name as name
+ 			 from sys_user  as users
+ 			 left join rel_virtual_account_to_user as vir on users.id=vir.user_id
+ 			 left join sys_user as  virtual on vir.account_id =virtual.id
+
+ 			 where users.is_virtual_account=0 and vir.id is not null and vir.deleted=0 and users.deleted=0
+ 			 and users.id in(
+ 			 select id from sys_user where common_id in(  select common_id from sys_user where id=#{userId}))
+	</select>
+
+
+	<update id="updateRelVirtualAccountToUser" parameterType="HashMap">
+		UPDATE rel_virtual_account_to_user set deleted = 1 where 	user_id in(
+		select id from sys_user  where common_id =(
+		select common_id from sys_user where id=#{userId}
+		)
+		);
+		<if test="accountIds !=null">
+			<foreach collection="accountIds" item="accountId" >
+				insert into rel_virtual_account_to_user(user_id,account_id,type_id,deleted) VALUES (#{userId},#{accountId},#{typeId},0);
+			</foreach>
+		</if>
+	</update>
+
+    
+    <select id="selectSysUsersByTemp" resultMap="result_sys_user_map">  
+        select a.* from sys_user a
+		LEFT JOIN pfmc_result b
+		ON a.id=b.user_id 
+		WHERE a.deleted=0 and b.deleted=0 and b.create_time&gt;'2015-12-31 23:59:59' and b.create_time&lt;'2016-2-1 00:00:01'
+    </select>
+    
+   <!--  <select id="selectSysUsersByRoleId" parameterType="long" resultMap="result_sys_user_map">   
+        select 
+        u.* from sys_user u left join rel_role_to_user r on u.id=r.user_id
+        where r.role_id=#{id} AND u.deleted=0 AND r.deleted=0
+    </select> -->
+    
+    <select id="listSysUsersByRoleIdAndTypeId" parameterType="long" resultMap="result_sys_user_map">   
+        select 
+        u.* from sys_user u left join rel_role_to_user r on u.id=r.user_id
+        where r.role_id=#{roleId} AND u.deleted=0 AND r.deleted=0
+        and u.id in(select MAX(id) from sys_user group by common_id)
+        <if test="typeId!=null">
+        and u.type_id = #{typeId}
+        </if>
+    </select>
+    
+    
+    <select id="selectReviewersByNodeId" parameterType="long" resultMap="result_sys_user_map">   
+        select b.* from 
+		rel_reviewer_to_node a
+		LEFT JOIN 
+		sys_user b
+		ON 
+		b.id = a.reviewer_id
+		where a.deleted=0 and b.deleted=0 and a.node_id = #{id} and a.type_id=1
+		UNION
+		select b.* from 
+		rel_reviewer_to_node a  
+		LEFT JOIN 
+		rel_role_to_user c 
+		ON
+		a.reviewer_id = c.role_id
+		LEFT JOIN
+		sys_user b 
+		ON
+		b.id=c.user_id
+		where a.deleted=0 and b.deleted=0 and c.deleted=0
+		and a.node_id = #{id} and a.type_id = 2 
+		and c.role_id=a.reviewer_id
+    </select>
+    
+    
+    <select id="findCandidatesByRankIdZtree" parameterType="long" resultMap="result_sys_user_map">
+    select * from sys_user where common_id in(
+        select 
+        u.common_id from sys_user u left join rel_user_to_rank r on u.id=r.user_id
+        where r.rank_id=#{id} AND r.type_id=1 AND u.deleted=0 AND r.deleted=0
+        )
+    </select>
+    
+    <select id="findCandidatesByRankId" parameterType="long" resultMap="result_sys_user_map">
+        select distinct
+       u.id, u.name,u.common_id from sys_user u left join rel_user_to_rank r on u.id=r.user_id
+        where r.rank_id=#{id} AND r.type_id=1 AND u.deleted=0 AND r.deleted=0
+
+    </select>
+    
+    <!-- 获取rank下在职状态的user -->
+    <select id="selectInfoRankCandidates" parameterType="HashMap" resultMap="result_sys_user_map">   
+        select 
+        u.* from sys_user u left join rel_user_to_rank r on u.id=r.user_id
+        where r.rank_id=#{rankId} AND r.type_id=1 AND u.deleted=0 AND r.deleted=0
+        <if test="userTypeId!=null">
+        	and u.type_id=#{userTypeId}
+        </if>
+    </select>
+    
+    <!--  <select id="findChosenUsersByRankId" parameterType="long" resultMap="result_sys_user_map">   
+        select 
+        u.* from sys_user u left join rel_user_to_rank r on u.id=r.user_id
+        where r.rank_id=#{id} AND r.type_id=1 AND u.deleted=0 AND r.deleted=0 AND u.type_id != 11002
+    </select>-->
+    
+    <select id="findChosenUsersByRankId" parameterType="long" resultMap="result_sys_user_map">
+        select 
+        u.* from sys_user u left join rel_user_to_rank r on u.id=r.user_id
+        where r.rank_id=#{id} AND r.type_id=2 AND u.deleted=0 AND r.deleted=0
+    </select>
+    
+    
+    
+    <select id="selectSysUsersByDepartmentId" parameterType="long" resultMap="result_sys_user_map">   
+        select 
+        * from sys_user
+        where id in(
+        	select user_id  from rel_user_to_department where department_id = #{departmentId} and deleted =0 and common_type=0 and is_virtual_account=0)
+        and deleted=0 and type_id=11001 and updateEndTime IS NULL;
+    </select>
+    
+    <!-- 更新部门 -->
+    <update id="updateDepartmentByUserId" parameterType="HashMap" flushCache="true">   
+      update rel_user_to_department set common_type=#{commonType} where user_id=#{userId} and deleted=0
+    </update>
+    
+    <select id="selectUsersByDepartmentId" parameterType="long" resultMap="result_sys_user_map">   
+        select 
+        id,name from sys_user 
+        where id in(
+        	select user_id  from rel_user_to_department where department_id = #{departmentId} and common_type=0 and deleted =0 and updateEndTime IS NULL) 
+        and deleted=0 and type_id=11001
+    </select>
+    
+    
+    <select id="selectSysUsersByPage" parameterType="HashMap" resultMap="result_sys_user_map">  
+        SELECT *,i.description FROM (
+        SELECT row_number() over(order by common_id) as rn, * FROM (
+        SELECT * FROM sys_user 
+        WHERE deleted=0
+        <if test="userKeyword != null">
+			AND name like '%'+#{userKeyword}+'%' 
+		</if> 
+		<if test="unitId != null">
+			AND unit_id=#{unitId}
+		</if>
+		<if test="typeId != null">
+			AND type_id=#{typeId}
+		</if>
+		<if test="departmentId != null">
+			AND id in (select user_id from rel_user_to_department where deleted=0 and department_id=#{departmentId})
+		</if>
+		    AND id in(select MAX(id) from sys_user group by common_id)
+
+		) as a) as b
+        LEFT JOIN info_user_history i ON b.id=i.user_id and i.deleted=0
+        WHERE
+		1=1
+        <![CDATA[
+            and rn>#{start} and rn<=#{end}
+         ]]>
+    </select>
+    
+    <select id="selectUsersByEvaluationId" parameterType="long" resultMap="result_sys_user_map">   
+        select 
+        * from sys_user 
+        where id in( 
+        	select user_id  from rel_user_to_evaluation where evaluation_id = #{id} and deleted =0 and type_id=1) 
+        and deleted=0;
+    </select>
+    
+    <select id="selectReviewersByEvaluationId" parameterType="long" resultMap="result_sys_user_map">   
+        select 
+        * from sys_user 
+        where id in( 
+        	select user_id  from rel_user_to_evaluation where evaluation_id = #{id} and deleted=0 and type_id=2) 
+        and deleted=0;
+    </select>
+
+	<select id="selectReviewersByProEvaluationId" parameterType="long" resultMap="result_sys_user_map">
+		select
+		a.* from sys_user a
+		left join
+		rel_user_to_pro_evaluation b
+		on a.common_id = b.user_common_id
+		where a.updateEndTime IS NULL and b.type_id=20002 and b.evaluation_id=#{id} and a.deleted=0 and b.deleted=0;
+	</select>
+
+
+	<select id="getAccountIdsByUserId" parameterType="long" resultType="long">
+		select
+		account_id from rel_virtual_account_to_user
+		where deleted=0 and user_id=#{id}
+	</select>
+
+
+
+
+
+    <!-- insert -->
+    <insert id="insertSysUser" parameterType="SysUser">
+    	<selectKey keyProperty="id" resultType="long">
+            select @@identity
+        </selectKey>
+  		insert into sys_user (username,password,name,show_name,unit_id,sex_id,identity_id,birthday,education_id,politic_id,
+  								personal_phone,work_phone,police_number,role_type_id,role_level_id,signature,police_type_id,
+								user_uid,type_id,common_id,updateStartTime,updateEndTime,updateVersion,token,account_id)
+  		values (#{username},#{password},#{name},#{showName},#{unitId,jdbcType=INTEGER},#{sexId,jdbcType=INTEGER},#{identityId,jdbcType=INTEGER},
+  				#{birthday,jdbcType=DATE},#{educationId,jdbcType=INTEGER},#{politicId,jdbcType=INTEGER},
+  				#{personalPhone},#{workPhone},#{policeNumber},#{roleTypeId,jdbcType=INTEGER},
+  				#{roleLevelId,jdbcType=INTEGER},#{signature},#{policeTypeId},#{userUid},#{type.id},
+				#{commonId},#{updateStartTime},#{updateEndTime},#{updateVersion},#{token},#{accountId})
+	</insert>
+
+	<!-- update -->
+	<update id="updateSysUserById" parameterType="SysUser" flushCache="true">
+		update sys_user
+		<set>
+			<if test="name != null">
+				name = #{name},
+			</if>
+			<if test="showName != null">
+				show_name = #{showName},
+			</if>
+			<if test="username != null">
+				username = #{username},
+			</if>
+			<if test="password != null">
+				password = #{password},
+			</if>
+			<if test="sexId != null">
+				sex_id = #{sexId},
+			</if>
+			<if test="identityId != null">
+				identity_id = #{identityId},
+			</if>
+			<if test="birthday != null">
+				birthday = #{birthday},
+			</if>
+			<if test="educationId != null">
+				education_id = #{educationId},
+			</if>
+			<if test="politicId != null">
+				politic_id = #{politicId},
+			</if>
+			<if test="unitId != null">
+				unit_id = #{unitId},
+			</if>
+			<if test="policeTypeId != null">
+				police_type_id = #{policeTypeId},
+			</if>
+			<if test="personalPhone != null">
+				personal_phone = #{personalPhone},
+			</if>
+			<if test="workPhone != null">
+				work_phone = #{workPhone},
+			</if>
+			<if test="policeNumber != null">
+				police_number = #{policeNumber},
+			</if>
+			<if test="roleTypeId != null">
+				role_type_id = #{roleTypeId},
+			</if>
+			<if test="roleLevelId != null">
+				role_level_id = #{roleLevelId},
+			</if>
+			<if test="signature != null">
+				signature = #{signature},
+			</if>
+			<if test="avatar != null">
+				avatar = #{avatar},
+			</if>
+			<if test="userUid != null">
+				user_uid = #{userUid},
+			</if>
+			<if test="type != null">
+				type_id = #{type.id},
+			</if>
+			<if test="commonId != null">
+				common_id = #{commonId},
+			</if>
+			<if test="updateStartTime != null">
+				updateStartTime = #{updateStartTime},
+			</if>
+			<if test="updateEndTime != null">
+				updateEndTime = #{updateEndTime},
+			</if>
+			<if test="updateVersion != null">
+				updateVersion = #{updateVersion},
+			</if>
+			<if test="token != null">
+				token = #{token},
+			</if>
+			<if test="accountId != null">
+				account_id = #{accountId}
+			</if>
+			
+		</set>
+		where id = #{id}
+	</update>
+    
+	<!-- delete -->
+	<delete id="deleteSysUserById" parameterType="long" flushCache="true">
+		update sys_user
+		<set>
+			deleted = 1
+		</set>
+		where id =#{id}
+	</delete>
+	
+	
+	
+	<!-- role 关联 -->
+	<insert id="insertSysUserRoleRelation" parameterType="HashMap">
+  		insert into rel_role_to_user (role_id,user_id)
+  		values (#{roleId},#{userId})
+	</insert>
+	
+	<delete id="deleteRole" parameterType="long" flushCache="true">
+		update rel_role_to_user 
+		set deleted=1
+        where 
+        user_id = #{userId}
+        
+	</delete>
+	
+	<!-- job 关联 -->
+	<insert id="insertSysUserJobRelation" parameterType="HashMap">
+  		insert into rel_user_to_job(job_id,user_id,type_id,deleted)
+  		values (#{jobId},#{userId},#{typeId},0)
+	</insert>
+	
+	<update id="deleteAllJobs" parameterType="long" flushCache="true">
+		update rel_user_to_job 
+		set deleted=1
+        where 
+        user_id=#{userId}
+        and
+        deleted=0
+	</update>
+	
+	<update id="deleteJobByConditions" parameterType="HashMap" flushCache="true">
+		update rel_user_to_job 
+		set deleted=1
+        where 
+        user_id=#{userId}
+        and
+        job_id=#{jobId}
+        and
+        deleted=0
+	</update>
+	<!-- job 关联 end -->
+	
+	<!-- department 关联 -->
+	<insert id="insertUserDepartmentRelation" parameterType="HashMap">
+  		insert into rel_user_to_department(department_id,user_id,type_id,deleted,common_type)
+  		values (#{departmentId},#{userId},#{typeId},0,#{commonType})
+	</insert>
+	
+	<update id="deleteAllDepartments" parameterType="long" flushCache="true">
+		update rel_user_to_department 
+		set deleted=1
+        where 
+        user_id=#{userId}
+        and
+        deleted=0
+	</update>
+	
+	<delete id="deleteDepartmentByConditions" parameterType="HashMap" flushCache="true">
+		update rel_user_to_department 
+		set deleted=1
+        where 
+        deleted=0
+        <if test="userId != null">
+			and user_id=#{userId} 
+		</if> 
+		<if test="departmentId != null">
+			and department_id=#{departmentId} 
+		</if>
+		<if test="id != null">
+			and id=#{id} 
+		</if>
+	</delete>
+	<!-- department 关联 end -->
+	
+	<select id="selectReviewUsersByNodeId" parameterType="Long" resultMap="result_sys_user_map">
+		select
+			t1.*
+		from sys_user t1
+		left join rel_reviewer_to_node t2
+		on t1.id=t2.reviewer_id
+		where t1.deleted=0
+			and t2.deleted=0
+			and t2.type_id=12002
+			and t2.node_id=#{nodeId}
+	</select>
+
+
+	<select id="selectSbskSeasonScoreForUser" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select SUM(score) AS totalScore
+		from sbsk_result_constitute_score_view
+		where
+		department_id = #{departmentId}
+		and DATEPART(YEAR, for_time) = #{year}
+			and DATEPART(MONTH, for_time) >= #{startMonth}
+			and DATEPART(MONTH, for_time) &lt;= #{endMonth}
+	</select>
+	<select id="selectSbskMonthScoreForUser" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select ISNULL(SUM(b.score*c.weight),0)  as totalScore
+			from
+			sbsk_result  as a
+			left join sbsk_constitute_score as  b on a.id=b.result_id
+			left join constitute_manage as c on c.id=b.constitute_id
+		where
+		a.deleted=0
+		and a.department_id = #{departmentId}
+		and DATEPART(YEAR, a.for_time) = #{year}
+		and DATEPART(MONTH, a.for_time)= #{month}
+
+	</select>
+	<!-- 每月一号自动更新 -->
+	<select id="seleceFindAllUseres" resultMap="result_sys_user_map">
+		select * from sys_user
+	</select>
+</mapper>  

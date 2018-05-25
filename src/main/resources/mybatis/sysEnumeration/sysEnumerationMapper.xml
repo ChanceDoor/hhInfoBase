@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC   
+    "-//mybatis.org//DTD Mapper 3.0//EN"  
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">  
+     
+<mapper namespace="hanghuan.jixiaoqs.dao.SysEnumerationMapper">  
+	<resultMap type="SysEnumeration" id="result_sys_enumeration_map"> 
+    	<result property="id" column="id"/> 
+    	<result property="value" column="value"/> 
+    	<result property="description" column="description"/> 
+    	<result property="type" column="type"/> 
+  	</resultMap>  
+  
+    <!-- findById -->  
+    <select id="findEnumerationById" parameterType="HashMap" resultMap="result_sys_enumeration_map">  
+        select  
+        * from sys_enumeration where id=#{id}  
+    </select>
+
+	<select id="findEnumerationByPfmcEvaluationId" parameterType="Long" resultMap="result_sys_enumeration_map">
+		select
+		s.* from rel_label_to_evaluation r
+		inner join sys_enumeration s
+		on r.label_id=s.id where r.evaluation_id=#{evaluationId} and r.deleted=0
+	</select>
+
+	<select id="findEnumerationByValue" parameterType="String" resultMap="result_sys_enumeration_map">
+        select  
+        top 1 * from sys_enumeration where value=#{value}  
+    </select>
+    
+    <!-- selectAll 返回记录列表 -->  
+
+    <select id="selectAllEnumerations" resultMap="result_sys_enumeration_map">  
+        select  
+        * from sys_enumeration order by id asc
+    </select>
+    
+    <!-- list -->  
+    <select id="selectAllSysEnumerationsByConditions" parameterType="HashMap" resultMap="result_sys_enumeration_map">  
+        select  
+        * from sys_enumeration
+        where 
+        1=1
+        	<if test="enumerationKeyword != null">
+				and (description like '%'+#{enumerationKeyword}+'%' or value like '%'+#{enumerationKeyword}+'%')
+			</if> 
+			<if test="value != null">
+				and value=#{value} 
+			</if>
+			<if test="description != null">
+				and description=#{description} 
+			</if>
+		
+    </select>
+    
+    <select id="selectSysEnumerationsByConditionsByPage" parameterType="HashMap" resultMap="result_sys_enumeration_map">  
+        select  
+        * from (
+        select row_number() over(order by id) as rn, * from 
+        sys_enumeration
+        where 1=1
+        <if test="enumerationKeyword != null">
+			and (description like '%'+#{enumerationKeyword}+'%' or value like '%'+#{enumerationKeyword}+'%')
+		</if>
+		<if test="value != null">
+				and value=#{value} 
+			</if>
+		<if test="description != null">
+			and description=#{description} 
+		</if>
+        )as a
+        where 1=1
+         <if test="pageNum!=null and pageSize!=null">
+	           <![CDATA[
+	            and rn>#{pageNum} and rn<=#{pageSize}
+	           ]]>
+	     </if>
+    </select>
+    
+    <select id="listSysEnumerationsByConditionsCount" parameterType="HashMap" resultType="Integer">
+         select count(id) from sys_enumeration where 1=1
+        <if test="enumerationKeyword != null">
+			and (description like '%'+#{enumerationKeyword}+'%' or value like '%'+#{enumerationKeyword}+'%')
+		</if>
+		<if test="value != null">
+			and value=#{value} 
+		</if>
+		<if test="description != null">
+			and description=#{description} 
+		</if>
+    </select>
+    
+    <select id="selectSysEnumerationsByPage" parameterType="HashMap" resultMap="result_sys_enumeration_map">  
+        select  
+        * from (select rownum as rn, a.* from (select * from sys_enumeration order by id asc) a)
+        where 
+        <![CDATA[
+             rn>#{start} and rn<=#{end}
+         ]]>
+    </select>
+    
+    <select id="selectSysEnumertaionsByPrincipleId" parameterType="long" resultMap="result_sys_enumeration_map">  
+        select 
+        se.* from sys_enumeration se left join rel_principle_to_dep_type r on se.id=r.dep_type_id
+        where r.principle_id=#{id} and r.deleted=0
+    </select>
+    
+    <select id="selectPoliceTypesByPrincipleId" parameterType="long" resultMap="result_sys_enumeration_map">  
+        select 
+        se.* from sys_enumeration se left join rel_principle_to_police_type r on se.id=r.police_type_id
+        where r.principle_id=#{id} and r.deleted=0
+    </select>
+    
+    
+    
+    
+    <!-- insert -->
+    <insert id="insertSysEnumeration" parameterType="SysEnumeration">
+  		insert into sys_enumeration (id,value,description)
+  		values (#{id},#{value},#{description,jdbcType=VARCHAR})
+	</insert>
+	
+	<!-- update -->
+	<update id="updateSysEnumerationById" parameterType="SysEnumeration" flushCache="true">
+		update sys_enumeration
+		<set>
+			<if test="value != null">
+				value = #{value},
+			</if>
+			<if test="description != null">
+				description = #{description},
+			</if>
+		</set>
+		where id = #{id}
+	</update>
+    
+	<!-- delete -->
+	<delete id="deleteSysEnumerationById" parameterType="long" flushCache="true">
+		delete from sys_enumeration
+		where id =#{id}
+	</delete>
+
+
+	<!-- 关联查询 -->
+	<select id="selectLabelEnumerationsByEvaluationId" parameterType="long" resultMap="result_sys_enumeration_map">
+		select
+		* from sys_enumeration a
+		LEFT JOIN
+		rel_label_to_evaluation b
+		ON
+		a.id=b.label_id
+		where
+		a.description='测评标签'
+
+		AND b.evaluation_id=#{id}
+	</select>
+</mapper>  

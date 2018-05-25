@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC   
+    "-//mybatis.org//DTD Mapper 3.0//EN"  
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">  
+     
+<mapper namespace="hanghuan.jixiaoqs.dao.SysRoleMapper">  
+    <resultMap type="SysRole" id="result_sys_role_map"> 
+    	<result property="id" column="id"/> 
+    	<result property="name" column="name"/> 
+    	<result property="description" column="description"/> 
+    	<result property="typeId" column="type_id"/> 
+    	<result property="departmentScope" column="department_scope"/> 
+    	<collection property="type" column="type_id" select="hanghuan.jixiaoqs.dao.SysEnumerationMapper.findEnumerationById"/>
+    	<collection property="privileges" column="id" select="hanghuan.jixiaoqs.dao.SysPrivilegeMapper.selectSysPrivilegesByRoleId"/>
+  	</resultMap>  
+  	
+    <!-- find -->
+	<select id="findSysRole" resultType="SysRole">
+		select id,
+		name from sys_role where  deleted=0
+	</select>
+
+	<select id="findSysRoleById" parameterType="long" resultMap="result_sys_role_map">
+        select  
+        * from sys_role where id=#{id} AND deleted=0
+    </select>  
+   
+    <select id="findSysRoleByName" parameterType="string" resultMap="result_sys_role_map">  
+        select  
+        * from sys_role where name=#{name}  and deleted=0 
+    </select>
+
+	<select id="isLeaderByUserId" parameterType="long" resultType="boolean">
+
+		  select case when
+			  (select count(id) from rel_role_to_user where deleted=0 and user_id = #{id} and role_id in (20,21,23))>0
+			  then 1 else 0 end ;
+	</select>
+
+
+    
+    <!-- list -->  
+    <select id="selectAllSysRolesByConditions" parameterType="HashMap" resultMap="result_sys_role_map">  
+        select  
+        * from sys_role
+        where 
+        deleted=0 
+       	<if test="roleKeyword != null">
+			and name like '%'+#{roleKeyword}+'%' 
+		</if> 
+    </select>
+    
+    
+    <select id="selectSysRolesByConditionsByPage" parameterType="HashMap" resultMap="result_sys_role_map">  
+        select  
+        * from (
+        select row_number() over(order by id) as rn, * from 
+        sys_role
+        where deleted=0 
+        <if test="roleKeyword != null">
+			and name like '%'+#{roleKeyword}+'%' 
+		</if>
+        )as a
+        where 
+        <![CDATA[
+             rn>#{pageNum} and rn<=#{pageSize}
+         ]]>
+    </select>
+    
+    <select id="listSysRolesByConditionsCount" parameterType="HashMap" resultType="Integer">
+        select count(id) from sys_role 
+        where deleted=0 
+        <if test="roleKeyword != null">
+			and name like '%'+#{roleKeyword}+'%' 
+		</if>
+    </select>
+    
+    <select id="selectSysRolesByUserId" parameterType="HashMap" resultMap="result_sys_role_map">   
+        select 
+        ro.* from sys_role ro left join rel_role_to_user r on ro.id=r.role_id
+        where r.user_id=#{id} AND ro.deleted=0 AND r.deleted=0
+    </select>
+    
+<!--     <select id="selectSysRolesByPrivilegeId" parameterType="HashMap" resultMap="result_sys_role_map">   
+        select 
+        ro.* from sys_role ro left join rel_privilege_to_role r on ro.id=r.role_id
+        where r.privilege_id=#{id} AND ro.deleted=0 AND r.deleted=0 
+    </select> -->
+    
+    
+     <select id="selectReviewersByNodeId" parameterType="long" resultMap="result_sys_role_map">  
+        select  a.* from 
+        sys_role a 
+        LEFT JOIN 
+        rel_reviewer_to_node b
+        ON a.id=b.reviewer_id
+        WHERE a.deleted=0 and b.deleted=0 and node_id=#{nodeId}
+    </select>
+    
+    
+    
+    <!-- insert -->
+    <insert id="insertSysRole" parameterType="SysRole">
+    	<selectKey keyProperty="id" resultType="long">
+            select @@identity
+        </selectKey>
+  		insert into sys_role (name,description,type_id,department_scope)
+  		values (#{name},#{description},#{typeId},#{departmentScope})
+	</insert>
+	
+	<!-- update -->
+	<update id="updateSysRoleById" parameterType="SysRole" flushCache="true">
+		update sys_role
+		<set>
+			<if test="name != null">
+				name = #{name},
+			</if>
+			<if test="departmentScope != null">
+				department_scope = #{departmentScope},
+			</if>
+			<if test="description != null">
+				description = #{description},
+			</if>
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- delete -->
+	<delete id="deleteSysRoleById" parameterType="long" flushCache="true">
+        update sys_role
+		<set>
+			deleted = 1
+		</set>
+	    	where id =#{id}
+	</delete>
+	
+	<!-- privilege 关联 -->
+	<insert id="insertSysRolePrivilegeRelation" parameterType="HashMap">
+		<selectKey keyProperty="id" resultType="long">
+            select @@identity
+        </selectKey>
+  		insert into rel_privilege_to_role (role_id,privilege_id)
+  		values (#{roleId},#{privilegeId})
+	</insert>
+	
+	<delete id="deletePrivilege" parameterType="HashMap" flushCache="true">
+		update rel_privilege_to_role 
+		set deleted=1
+        where 
+        role_id = #{roleId}
+        and
+        privilege_id = #{privilegeId}
+        
+	</delete>
+	
+	<select id="selectReviewRolesByNodeId" parameterType="Long" resultMap="result_sys_role_map">
+		select
+			t1.*
+		from sys_role t1
+		left join rel_reviewer_to_node t2
+		on t1.id=t2.reviewer_id
+		where t1.deleted=0
+			and t2.deleted=0
+			and t2.type_id=12001
+			and t2.node_id=#{nodeId}
+	</select>
+	
+	
+</mapper>  

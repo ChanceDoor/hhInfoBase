@@ -1,0 +1,324 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC   
+    "-//mybatis.org//DTD Mapper 3.0//EN"  
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">  
+     
+<mapper namespace="hanghuan.jixiaoqs.dao.InfoDepartmentMapper">  
+    <resultMap type="InfoDepartment" id="result_info_department_map"> 
+    	<result property="id" column="id"/> 
+    	<result property="name" column="name"/> 
+    	<result property="level" column="level"/> 
+    	<result property="typeId" column="type_id"/> 
+    	<result property="depTypeId" column="dep_type_id"/> 
+    	<result property="description" column="description"/>
+    	<result property="planMemberCount" column="plan_member_count"/>
+    	<result property="actualMemberCount" column="actual_member_count"/>
+    	<result property="planKeLeaderCount" column="plan_ke_leader_count"/>
+    	<result property="actualKeLeaderCount" column="actual_ke_leader_count"/>
+    	<result property="foundReason" column="found_reason"/>
+    	<result property="orgCode" column="org_code"/>
+    	
+    	<collection property="type" column="type_id" select="hanghuan.jixiaoqs.dao.SysEnumerationMapper.findEnumerationById"/>
+    	<collection property="depType" column="dep_type_id" select="hanghuan.jixiaoqs.dao.SysEnumerationMapper.findEnumerationById"/>
+    	<collection property="upperDepartments" column="id" select="hanghuan.jixiaoqs.dao.InfoDepartmentMapper.selectUpperDepartmentsByDepartmentId"/>
+    	<collection property="jobs" column="id" select="hanghuan.jixiaoqs.dao.InfoJobMapper.selectInfoJobsByDepartmentId"/>
+  	</resultMap>
+
+	<select id="selectInfoDepartmentByUpperAndLower" parameterType="HashMap" resultType="java.lang.String">
+		<if test="FrontUnit!=null">
+			select lower_department_id from rel_department_to_department where upper_department_id=#{FrontUnit}
+			union all
+			select upper_department_id from rel_department_to_department where lower_department_id=#{FrontUnit}
+		</if>
+		<if test="FrontUnit!=null and NowUnit!=null">
+			union all
+		</if>
+		<if test="NowUnit!=null">
+			select lower_department_id from rel_department_to_department where upper_department_id=#{NowUnit}
+			union all
+			select upper_department_id from rel_department_to_department where lower_department_id=#{NowUnit}
+		</if>
+	</select>
+    <!-- find -->  
+    <select id="findInfoDepartmentById" parameterType="long" resultMap="result_info_department_map">  
+        select  
+        * from info_department where id=#{id} AND deleted=0
+    </select>  
+    <select id="findInfoDepartmentByName" resultMap="result_info_department_map">  
+        select  
+        * from info_department where deleted=0 and  name=#{name}  
+    </select>  
+    <select id="findInfoDepartmentByOrgCode" parameterType="long" resultMap="result_info_department_map">  
+        select  
+        * from info_department where org_code=#{orgCode} AND deleted=0
+    </select>  
+    
+    
+    <!-- list -->  
+    <select id="selectAllInfoDepartmentsByConditions" parameterType="HashMap" resultMap="result_info_department_map">  
+        select  
+        * from info_department
+        where 
+        deleted=0 
+        	<if test="departmentKeyword != null">
+				and name like '%'+#{departmentKeyword}+'%' 
+			</if> 
+			<if test="depTypeId != null">
+				and dep_type_id = #{depTypeId} 
+			</if> 
+			<if test="upperName != null">
+				and id in (
+					select lower_department_id from rel_department_to_department 
+					where deleted=0 and upper_department_id=(
+						select id from info_department
+				        where 
+				        deleted=0 and name=#{upperName}
+        			)
+        		)
+			</if> 
+			<if test="upperId != null">
+				and id in (
+					select lower_department_id from rel_department_to_department 
+					where deleted=0 and upper_department_id=(
+						select id from info_department
+				        where 
+				        deleted=0 and id=#{upperId}
+        			)
+        		)
+			</if> 
+    </select>
+    
+    <!-- 根据部门ID获取它的所有上级部门 -->
+    <select id="selectUpperDepartmentsByDepartmentId" parameterType="HashMap" resultMap="result_info_department_map">  
+        select  
+        * from info_department
+        where 
+        id in
+        (
+ 			select upper_department_id from 
+			rel_department_to_department 
+			where 
+			lower_department_id=#{id}
+			AND 
+			deleted=0 
+        )
+    </select>
+    
+    <!-- 根据部门ID获取它的所有下级部门 -->
+    <select id="selectLowerDepartmentsByDepartmentId" parameterType="long" resultMap="result_info_department_map">  
+        select DISTINCT a.* from info_department a
+        LEFT JOIN rel_department_to_department b 
+        ON a.id=b.lower_department_id
+        where a.deleted=0 and b.deleted=0 and b.upper_department_id=#{id}
+        
+    </select>
+    
+    <select id="selectToEvalDepartmentsByEvalutionId" parameterType="long" resultMap="result_info_department_map">  
+        select  
+        a.* from info_department a
+        LEFT JOIN 
+        rel_user_to_evaluation b
+        ON a.id=b.user_id
+        where a.deleted=0
+        	and b.evaluation_id=#{eid}
+        	and b.type_id=1
+        	and b.deleted=0
+        
+    </select>
+
+	<select id="selectToEvalDepartmentsByProEvalutionId" parameterType="long" resultMap="result_info_department_map">
+        select
+        DISTINCT a.* from info_department a
+        LEFT JOIN
+        rel_user_to_pro_evaluation d
+        ON a.id=d.user_common_id
+        where a.deleted=0
+			and d.deleted=0
+        	and d.evaluation_id=#{eid}
+        	and d.type_id=20001
+
+    </select>
+    
+    
+    
+    <select id="selectInfoDepartmentsByConditionsByPage" parameterType="HashMap" resultMap="result_info_department_map">  
+        select  
+        * from (
+        select row_number() over(order by id) as rn, * from 
+        info_department
+        where deleted=0 
+        <if test="departmentKeyword != null">
+			and name like '%'+#{departmentKeyword}+'%' 
+		</if>
+        )as a
+        where 1=1
+         <if test="pageNum!=null and pageSize!=null">
+	           <![CDATA[
+	             and rn>#{pageNum} and rn<=#{pageSize}
+	           ]]>
+	     </if>
+    </select>
+    
+    <select id="listInfoDepartmentsByConditionsCount" parameterType="HashMap" resultType="Integer">
+        select count(id) from info_department where deleted=0
+        <if test="departmentKeyword != null">
+			and name like '%'+#{departmentKeyword}+'%' 
+		</if>
+    </select>
+    
+    <!-- insert -->
+    <insert id="insertInfoDepartment" parameterType="InfoDepartment">
+    	<selectKey keyProperty="id" resultType="long">
+            select @@identity
+        </selectKey>
+  		insert into info_department(name,type_id,dep_type_id,level,description,plan_member_count,actual_member_count,plan_ke_leader_count,actual_ke_leader_count,found_reason,org_code)
+  		values (#{name},#{typeId},#{depTypeId},#{level},#{description},#{planMemberCount},#{actualMemberCount},
+  			#{planKeLeaderCount},#{actualKeLeaderCount},#{foundReason},#{orgCode})
+	</insert>
+	
+	<!-- 插入部门从属关系 -->
+	<insert id="insertUpperDepartmentRelation" parameterType="HashMap">
+  		insert into rel_department_to_department(upper_department_id,lower_department_id,relation_type_id)
+  		values (#{upperDepartmentId},#{lowerDepartmentId},#{relationTypeId})
+	</insert>
+	
+	<!-- 插入岗位从属关系 -->
+	<insert id="insertInfoJobToInfoDepartment" parameterType="HashMap">
+		<selectKey keyProperty="id" resultType="long">
+            select @@identity
+        </selectKey>
+  		insert into rel_job_to_department(job_id,department_id)
+  		values (#{jobId},#{departmentId})
+	</insert>
+	
+	
+	<!-- update -->
+	<update id="updateInfoDepartmentById" parameterType="InfoDepartment" flushCache="true">
+		update info_department
+		<set>
+			<if test="name != null">
+				name = #{name},
+			</if>
+			<if test="typeId != null">
+				type_id = #{typeId},
+			</if>
+			<if test="depTypeId != null">
+				dep_type_id = #{depTypeId},
+			</if>
+			<if test="level != null">
+				level = #{level},
+			</if>
+			<if test="description != null">
+				description = #{description},
+			</if>
+			<if test="planMemberCount != null">
+				plan_member_count = #{planMemberCount},
+			</if>
+			<if test="actualMemberCount != null">
+				actual_member_count = #{actualMemberCount},
+			</if>
+			<if test="planKeLeaderCount != null">
+				plan_ke_leader_count = #{planKeLeaderCount},
+			</if>
+			<if test="actualKeLeaderCount != null">
+				actual_ke_leader_count = #{actualKeLeaderCount},
+			</if>
+			<if test="foundReason != null">
+				found_reason = #{foundReason},
+			</if>
+			<if test="orgCode != null">
+				org_code = #{orgCode},
+			</if>
+			
+		</set>
+		where id = #{id}
+	</update>
+	
+	<!-- delete -->
+	<delete id="deleteInfoDepartmentById" parameterType="long" flushCache="true">
+        update info_department
+		<set>
+			deleted = 1
+		</set>
+	    	where id =#{id}
+	</delete>
+	
+	<!-- 根据部门ID删除所有上下级关系 -->
+	<delete id="deleteRelDepartmentsById" parameterType="long" flushCache="true">
+		update rel_department_to_department
+		<set>
+			deleted = 1
+		</set>
+        where 
+        lower_department_id=#{id}
+        or
+        upper_department_id=#{id} 
+	</delete>
+	
+	<!-- 根据HashMap删除上下级关系 -->
+	<delete id="deleteRelDepartmentByConditions" parameterType="HashMap" flushCache="true">
+		update rel_department_to_department
+		<set>
+			deleted = 1
+		</set>
+        where 1=1
+        <if test="lowerDepartmentId != null">
+			and lower_department_id=#{lowerDepartmentId}
+		</if> 
+		<if test="upperDepartmentId != null">
+			and upper_department_id=#{upperDepartmentId}
+		</if> 
+		<if test="relationTypeId != null">
+			and relation_type_id=#{relationTypeId}
+		</if> 
+	</delete>
+	
+	<!-- 根据部门ID删除所有岗位关系 -->
+	<delete id="deleteInfoJobsByDepartmentId" parameterType="long" flushCache="true">
+		update rel_job_to_department
+		<set>
+			deleted=1
+		</set>
+        where 
+        department_id=#{id}
+	</delete>
+	
+	<!-- 根据用户ID获取部门 -->
+	<select id="selectDepartmentsByUserId" parameterType="long" resultMap="result_info_department_map">  
+        select  
+        a.* from info_department a
+        LEFT JOIN 
+        rel_user_to_department b
+        ON a.id=b.department_id
+        where a.deleted=0 and b.deleted=0 and b.user_id = #{id} order by b.id desc
+     </select>
+	
+	<select id="selectInfoDepartmentsByPrincipleId" parameterType="long" resultMap="result_info_department_map">   
+        select 
+        ro.* from info_department ro left join rel_principle_to_department r on ro.id=r.department_id
+        where r.principle_id=#{id}  and ro.deleted=0 and r.deleted=0
+   	</select>
+    
+    
+    <select id="findAllinfoDepartment" resultMap="result_info_department_map">
+        select * from info_Department d;
+    </select>
+    
+    <select id="findInfoDepartmentLikeName" resultMap="result_info_department_map" parameterType="string">
+       select d.id,d.name from info_department d where d.name like '%'+#{unit}
+    </select>
+
+	<select id="findDepartmentNameByUserId" parameterType="long" resultType="String">
+		select
+		TOP 1 a.name from info_department a
+		LEFT JOIN
+		rel_user_to_department b
+		ON a.id=b.department_id
+		where a.deleted=0 and b.deleted=0 and b.user_id = #{id}
+	</select>
+
+	
+</mapper>  
+
+
