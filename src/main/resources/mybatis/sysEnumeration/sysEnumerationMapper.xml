@@ -3,7 +3,7 @@
     "-//mybatis.org//DTD Mapper 3.0//EN"  
     "http://mybatis.org/dtd/mybatis-3-mapper.dtd">  
      
-<mapper namespace="hanghuan.jixiaoqs.dao.SysEnumerationMapper">  
+<mapper namespace="com.hzhanghuan.hhInfoBase.sysEnumeration.dao.SysEnumerationMapper">
 	<resultMap type="SysEnumeration" id="result_sys_enumeration_map"> 
     	<result property="id" column="id"/> 
     	<result property="value" column="value"/> 
@@ -12,7 +12,7 @@
   	</resultMap>  
   
     <!-- findById -->  
-    <select id="findEnumerationById" parameterType="HashMap" resultMap="result_sys_enumeration_map">  
+    <select id="findSysEnumerationById" parameterType="HashMap" resultMap="result_sys_enumeration_map">
         select  
         * from sys_enumeration where id=#{id}  
     </select>
@@ -31,30 +31,13 @@
     
     <!-- selectAll 返回记录列表 -->  
 
-    <select id="selectAllEnumerations" resultMap="result_sys_enumeration_map">  
+    <select id="findSysEnumerationsAll" resultMap="result_sys_enumeration_map">
         select  
         * from sys_enumeration order by id asc
     </select>
     
-    <!-- list -->  
-    <select id="selectAllSysEnumerationsByConditions" parameterType="HashMap" resultMap="result_sys_enumeration_map">  
-        select  
-        * from sys_enumeration
-        where 
-        1=1
-        	<if test="enumerationKeyword != null">
-				and (description like '%'+#{enumerationKeyword}+'%' or value like '%'+#{enumerationKeyword}+'%')
-			</if> 
-			<if test="value != null">
-				and value=#{value} 
-			</if>
-			<if test="description != null">
-				and description=#{description} 
-			</if>
-		
-    </select>
-    
-    <select id="selectSysEnumerationsByConditionsByPage" parameterType="HashMap" resultMap="result_sys_enumeration_map">  
+    <!-- list -->
+    <select id="getSysEnumerationsByConditions" parameterType="HashMap" resultMap="result_sys_enumeration_map">
         select  
         * from (
         select row_number() over(order by id) as rn, * from 
@@ -71,14 +54,14 @@
 		</if>
         )as a
         where 1=1
-         <if test="pageNum!=null and pageSize!=null">
+         <if test="start!=null and end!=null">
 	           <![CDATA[
-	            and rn>#{pageNum} and rn<=#{pageSize}
+	            and rn>#{start} and rn<=#{end}
 	           ]]>
 	     </if>
     </select>
     
-    <select id="listSysEnumerationsByConditionsCount" parameterType="HashMap" resultType="Integer">
+    <select id="countSysEnumerationsByConditions" parameterType="HashMap" resultType="Integer">
          select count(id) from sys_enumeration where 1=1
         <if test="enumerationKeyword != null">
 			and (description like '%'+#{enumerationKeyword}+'%' or value like '%'+#{enumerationKeyword}+'%')
@@ -90,15 +73,7 @@
 			and description=#{description} 
 		</if>
     </select>
-    
-    <select id="selectSysEnumerationsByPage" parameterType="HashMap" resultMap="result_sys_enumeration_map">  
-        select  
-        * from (select rownum as rn, a.* from (select * from sys_enumeration order by id asc) a)
-        where 
-        <![CDATA[
-             rn>#{start} and rn<=#{end}
-         ]]>
-    </select>
+
     
     <select id="selectSysEnumertaionsByPrincipleId" parameterType="long" resultMap="result_sys_enumeration_map">  
         select 
